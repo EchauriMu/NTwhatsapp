@@ -11,7 +11,10 @@ app.use(bodyParser.json());
 // Crear una instancia del cliente de WhatsApp con LocalAuth para la persistencia de sesión
 const client = new Client({
     authStrategy: new LocalAuth(),
-    puppeteer: { headless: true } // Ejecutar sin abrir ventana del navegador
+    puppeteer: {
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox']  // Añadir estos argumentos
+    }
 });
 
 // Generar QR en consola para la primera vez
