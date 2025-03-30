@@ -29,7 +29,7 @@ client.on('ready', () => {
 client.initialize();
 
 // Endpoint para enviar mensajes
-app.post('/alert-whatsapp/:phone_number', async (req, res) => {
+app.post('/alert/:phone_number', async (req, res) => {
     const phoneNumber = req.params.phone_number;
     const message = req.body.content || 'No se recibió mensaje';
 
