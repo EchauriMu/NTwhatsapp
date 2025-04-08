@@ -1,42 +1,61 @@
 const express = require('express');
 const { Client, LocalAuth } = require('whatsapp-web.js');
-const qrcode = require('qrcode-terminal');
+const qrcode = require('qrcode');
 const bodyParser = require('body-parser');
 
 const app = express();
-
-// Middleware para parsear el cuerpo de la solicitud
 app.use(bodyParser.json());
 
-// Crear una instancia del cliente de WhatsApp con LocalAuth para la persistencia de sesión
+let qrCodeDataUrl = null; // Aquí guardaremos el QR generado
+
 const client = new Client({
     authStrategy: new LocalAuth(),
     puppeteer: {
         headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']  // Añadir estos argumentos
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
     }
 });
 
-// Generar QR en consola para la primera vez
-client.on('qr', (qr) => {
-    console.log('Escanea el siguiente código QR para iniciar sesión en WhatsApp:');
-    qrcode.generate(qr, { small: true });
+client.on('qr', async (qr) => {
+    console.log('Generando QR...');
+    qrCodeDataUrl = await qrcode.toDataURL(qr); // Generamos el QR como data URL
 });
 
-// Cuando el cliente esté listo
 client.on('ready', () => {
     console.log('¡Cliente de WhatsApp listo!');
+    qrCodeDataUrl = null; // Limpia el QR después de que el cliente esté listo
 });
 
-// Inicializamos el cliente
 client.initialize();
+
+// Endpoint para mostrar el QR en el navegador
+app.get('/qr', (req, res) => {
+    if (qrCodeDataUrl) {
+        res.send(`
+            <html>
+                <body style="text-align:center; font-family:sans-serif;">
+                    <h2>Escanea este código QR con WhatsApp</h2>
+                    <img src="${qrCodeDataUrl}" alt="QR Code" />
+                </body>
+            </html>
+        `);
+    } else {
+        res.send(`
+            <html>
+                <body style="text-align:center; font-family:sans-serif;">
+                    <h2>No hay un código QR disponible</h2>
+                    <p>El cliente de WhatsApp ya está autenticado o todavía no se ha generado un QR.</p>
+                </body>
+            </html>
+        `);
+    }
+});
 
 // Endpoint para enviar mensajes
 app.post('/alert/:phone_number', async (req, res) => {
     const phoneNumber = req.params.phone_number;
     const message = req.body.content || 'No se recibió mensaje';
 
-    // Validar que el número esté en formato internacional
     if (!phoneNumber.startsWith('+')) {
         return res.status(400).json({
             status: 'error',
@@ -45,9 +64,7 @@ app.post('/alert/:phone_number', async (req, res) => {
     }
 
     try {
-        // WhatsApp Web requiere que el número esté en formato "number@c.us"
         const chatId = `${phoneNumber.replace('+', '')}@c.us`;
-
         console.log(`Enviando mensaje a ${chatId}: ${message}`);
         await client.sendMessage(chatId, message);
         console.log('Mensaje enviado exitosamente.');
@@ -65,8 +82,8 @@ app.post('/alert/:phone_number', async (req, res) => {
     }
 });
 
-// Iniciar servidor Express en el puerto 3005
 const PORT = process.env.PORT || 3005;
 app.listen(PORT, () => {
     console.log(`Servidor Express escuchando en el puerto ${PORT}`);
+    console.log(`Visita http://localhost:${PORT}/qr para escanear el QR`);
 });
