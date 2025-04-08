@@ -83,7 +83,7 @@ app.post('/alert/:phone_number', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3005;
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`Servidor Express escuchando en el puerto ${PORT}`);
-    console.log(`Visita http://localhost:${PORT}/qr para escanear el QR`);
+    console.log(`Visita http://4.246.170.135:${PORT}/qr para escanear el QR`);
 });
